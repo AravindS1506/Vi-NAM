@@ -67,7 +67,7 @@ class MeanFieldLayer(nn.Module):
 
 
 class MeanFieldBNN(nn.Module):
-    """Mean-field variational inference BNN with VI in all layers."""
+    """Mean-field variational inference BNN with VI only in the last layer."""
 
     def __init__(
         self,
@@ -85,33 +85,40 @@ class MeanFieldBNN(nn.Module):
         self.log_noise_var = torch.log(torch.tensor(noise_std**2))
 
         self.network = nn.ModuleList()
-        # **Change 1:** Define all layer dimensions in a single list
-        dims = [input_dim] + hidden_dims + [output_dim]
-        for i in range(len(dims) - 1):
-            # **Change 2:** Replace nn.Linear with MeanFieldLayer for all layers
-            self.network.append(MeanFieldLayer(dims[i], dims[i + 1]))
-            # **Change 3:** Add activation only for non-final layers
-            if i < len(dims) - 2:
+        for i in range(len(hidden_dims) + 1):
+            if i == 0:
+                # First layer: deterministic nn.Linear
+                self.network.append(nn.Linear(self.input_dim, self.hidden_dims[i]))
+                self.network.append(self.activation)
+            elif i == len(hidden_dims):
+                # Last layer: MeanFieldLayer for VI
+                self.network.append(MeanFieldLayer(self.hidden_dims[i - 1], self.output_dim))
+            else:
+                # Hidden layers: deterministic nn.Linear
+                self.network.append(nn.Linear(self.hidden_dims[i - 1], self.hidden_dims[i]))
                 self.network.append(self.activation)
 
     def forward(self, x, num_samples=1):
-        """Propagate the inputs through the network using num_samples weights for all layers.
+        """Propagate the inputs through the network using num_samples weights for the last layer.
 
         Args:
             x (torch.tensor): Inputs to the network, shape (batch_size, input_dim).
-            num_samples (int, optional): Number of samples for all layers. Defaults to 1.
+            num_samples (int, optional): Number of samples for the last layer. Defaults to 1.
         """
         assert len(x.shape) == 2, "x.shape must be (batch_size, input_dim)."
 
-        # **Change 4:** Expand input to 3D at the start for all MeanFieldLayers
-        x = torch.unsqueeze(x, 0).repeat(num_samples, 1, 1)  # Shape: (num_samples, batch_size, input_dim)
-
-        # **Change 5:** Process all layers, applying MeanFieldLayer or activation
-        for layer in self.network:
-            if isinstance(layer, MeanFieldLayer):
-                x = layer(x)  # Shape: (num_samples, batch_size, layer_output_dim)
+        # Propagate through deterministic layers
+        for layer in self.network[:-1]:  # Exclude the last layer
+            if isinstance(layer, nn.Linear):
+                x = layer(x)  # Shape: (batch_size, layer_output_dim)
             else:
                 x = layer(x)  # Activation, same shape
+
+        # Expand for the last MeanFieldLayer
+        x = torch.unsqueeze(x, 0).repeat(num_samples, 1, 1)  # Shape: (num_samples, batch_size, hidden_dims[-1])
+
+        # Apply the last layer (MeanFieldLayer)
+        x = self.network[-1](x)  # Shape: (num_samples, batch_size, output_dim)
 
         assert len(x.shape) == 3, "x.shape must be (num_samples, batch_size, output_dim)"
         assert x.shape[-1] == self.output_dim
@@ -121,19 +128,22 @@ class MeanFieldBNN(nn.Module):
     def ll(self, y_obs, y_pred, num_samples=1):
         """Computes the log likelihood of the outputs of self.forward(x)"""
         l = torch.distributions.normal.Normal(y_pred, torch.sqrt(torch.exp(self.log_noise_var)))
+
         # Take mean over num_samples dim, sum over batch_size dim
         return l.log_prob(y_obs.unsqueeze(0).repeat(num_samples, 1, 1)).mean(0).sum(0).squeeze()
 
     def kl(self):
-        """Computes the KL divergence for all MeanFieldLayers."""
-        # **Change 6:** Sum KL divergence over all MeanFieldLayers
-        return sum(layer.kl() for layer in self.network if isinstance(layer, MeanFieldLayer))
+        """Computes the KL divergence for the last layer (MeanFieldLayer)."""
+        # Only the last layer is a MeanFieldLayer
+        return self.network[-1].kl()
 
     def loss(self, x, y, num_samples=1):
         """Computes the ELBO and returns its negative"""
         y_pred = self.forward(x, num_samples=num_samples)
+
         exp_ll = self.ll(y, y_pred, num_samples=num_samples)
         kl = self.kl()
+
         return kl - exp_ll, exp_ll, kl
 
 
@@ -307,7 +317,7 @@ for i,name in enumerate(dataset_list):
   optimizer = optim.Adam(model.parameters(), lr=0.1, weight_decay=1e-4)  # Reduced lr for better convergence
   scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5)
   num_samples = 500  # Increased MC samples for better ELBO estimation
-  n_epochs = 50 
+  n_epochs = 20  # Increased from 50
   scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5)
   anneal_epochs = 20
   for epoch in range(n_epochs):
