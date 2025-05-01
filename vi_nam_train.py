@@ -307,7 +307,7 @@ for i,name in enumerate(dataset_list):
   optimizer = optim.Adam(model.parameters(), lr=0.1, weight_decay=1e-4)  # Reduced lr for better convergence
   scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5)
   num_samples = 500  # Increased MC samples for better ELBO estimation
-  n_epochs = 1  # Increased from 50
+  n_epochs = 50 
   scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min', patience=5)
   anneal_epochs = 20
   for epoch in range(n_epochs):
