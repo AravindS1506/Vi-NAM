@@ -4,7 +4,7 @@
 Vi-NAM is a Neural Additive Model (NAM) that uses variational inference (VI) to perform Bayesian neural network regression on tabular datasets. It processes feature groups independently through Bayesian neural networks, combining their contributions additively to predict a target variable. The model is trained on datasets like Yacht Hydrodynamics, Concrete Compressive Strength, Kin8nm, and Bike Sharing Demand, outputting the negative log-likelihood (NLL) for each dataset as a performance metric.
 
 ## Prerequisites
-- Python 3.8+
+- Python
 - PyTorch
 - Pyro
 - NumPy
@@ -15,7 +15,7 @@ Vi-NAM is a Neural Additive Model (NAM) that uses variational inference (VI) to 
 ## Installation
 1. Clone the repository:
    ```bash
-   git clone <repository-url>
+   git clone https://github.com/AravindS1506/Vi-NAM.git
    cd Vi-NAM
    ```
 2. Install the required dependencies:
@@ -48,8 +48,3 @@ Vi-NAM is a Neural Additive Model (NAM) that uses variational inference (VI) to 
   ```python
   {'yacht_hydrodynamics': <nll_value>, 'concrete_compressive_strength': <nll_value>, 'kin8nm': <nll_value>, 'Bike_Sharing_Demand': <nll_value>}
   ```
-
-## Notes
-- The model uses a dynamic input dimension based on the dataset and applies ordinal encoding for categorical features and standard scaling for numerical features.
-- Training is configured with 500 Monte Carlo samples, 1 epoch (for demonstration; increase for better convergence), and KL annealing over 20 epochs.
-- The codebase is designed for extensibility, allowing custom datasets and feature group configurations.
