@@ -270,11 +270,11 @@ class CustomMixDataset(Dataset):
 def load_dataset(name, version = None, test_size=0.1):
     """Load data with temporal validation split"""
     if version is not None:
-        washte = fetch_openml(name=name, version=version, as_frame=True)
+        ver = fetch_openml(name=name, version=version, as_frame=True)
     else:
-        washte = fetch_openml(name=name, as_frame=True)
-    df = washte.data
-    y = washte.target
+        ver = fetch_openml(name=name, as_frame=True)
+    df = ver.data
+    y = ver.target
     # Time-based split (critical for temporal data)
     split_idx = int(len(df) * (1 - test_size))
     X_train, X_test = df.iloc[:split_idx], df.iloc[split_idx:]
@@ -283,7 +283,7 @@ def load_dataset(name, version = None, test_size=0.1):
     return X_train, X_test, y_train, y_test
 
 dataset_list = ["yacht_hydrodynamics", "concrete_compressive_strength", "kin8nm","Bike_Sharing_Demand"]
-avg_nll=np.zeros((dataset_list.length()))
+avg_nll = {}
 for i,name in enumerate(dataset_list):
   elbo_list = []
   print(name)
@@ -296,7 +296,7 @@ for i,name in enumerate(dataset_list):
 
   # Model initialization with dynamic input dimension and tuned noise_std
   std_y = train_dataset.y.std().item()
-  print(f"Target standard deviation: {std_y}")
+  # print(f"Target standard deviation: {std_y}")
 
 
   feature_dims = [1] * train_dataset.X.shape[1]
@@ -373,7 +373,7 @@ for i,name in enumerate(dataset_list):
           log_likelihood = model.ll(y, y_pred, num_samples=500)
           total_nll += -log_likelihood.item()  # Sum log-likelihood over batch
 
-      avg_nll[i] = total_nll / total_samples
-      print(f"\nFinal Test Negative Log-Likelihood (NLL): {avg_nll[i]:.2f}")
+      avg_nll[name] = total_nll / total_samples
+      print(f"\nFinal Test Negative Log-Likelihood (NLL): {avg_nll[name]:.2f}")
 
 print(avg_nll)
