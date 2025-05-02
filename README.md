@@ -48,3 +48,7 @@ Vi-NAM is a Neural Additive Model (NAM) that uses variational inference (VI) to 
   ```python
   {'yacht_hydrodynamics': <nll_value>, 'concrete_compressive_strength': <nll_value>, 'kin8nm': <nll_value>, 'Bike_Sharing_Demand': <nll_value>}
   ```
+## Citations
+
+- [bnn-mean-field-vi](https://github.com/Sheev13/bnn-mean-field-vi.git): Mean-field variational inference for Bayesian neural networks.
+- [LA-NAM](https://github.com/fortuinlab/LA-NAM.git): Laplace approximation-based Neural Additive Models.
